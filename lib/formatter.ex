@@ -94,7 +94,14 @@ defmodule JUnitFormatter do
   end
 
   def handle_cast({:test_finished, %ExUnit.Test{state: {:excluded, _}} = test}, config) do
-    config = adjust_case_stats(test, :skipped, config)
+    config =
+      case include_skipped?() do
+        true ->
+          adjust_case_stats(test, :skipped, config)
+
+        false ->
+          config
+      end
 
     {:noreply, config}
   end
@@ -276,5 +283,9 @@ defmodule JUnitFormatter do
   defp relative_path(path) do
     root = Application.get_env(:junit_formatter, :project_dir, nil) || File.cwd!()
     Path.relative_to(path, root)
+  end
+
+  defp include_skipped? do
+    Application.get_env(:junit_formatter, :include_skipped?, true)
   end
 end

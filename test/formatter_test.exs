@@ -202,6 +202,38 @@ defmodule FormatterTest do
       assert_xpath(output, ~x{//testcase[@name="test skip"]/skipped})
       refute xpath(output, ~x{//testcase[@name="test don't skip"]/skipped})
     end
+
+    test "excluded tests are not included if they are excluded via an option" do
+      defsuite do
+        @tag :foo
+        test "skip", do: assert(true)
+
+        test "don't skip", do: assert(true)
+      end
+
+      on_exit(&reset_config/0)
+      put_config(:include_skipped?, false)
+      output = run_and_capture_output(exclude: [:foo])
+
+      refute xpath(output, ~x{//testcase[@name="test skip"]})
+      refute xpath(output, ~x{//testcase[@name="test don't skip"]/skipped})
+    end
+
+    test "skipped tests are not included if they are excluded via an option" do
+      defsuite do
+        @tag :skip
+        test "skip", do: assert(true)
+
+        test "don't skip", do: assert(true)
+      end
+
+      on_exit(&reset_config/0)
+      put_config(:include_skipped?, false)
+      output = run_and_capture_output()
+
+      refute xpath(output, ~x{//testcase[@name="test skip"]})
+      refute xpath(output, ~x{//testcase[@name="test don't skip"]/skipped})
+    end
   end
 
   describe "error" do
@@ -265,7 +297,7 @@ defmodule FormatterTest do
         put_config(:include_file_line?, true)
         output = run_and_capture_output()
 
-        assert xpath(output, ~x{//testsuite/testcase/@file}s) == "test/formatter_test.exs:261"
+        assert xpath(output, ~x{//testsuite/testcase/@file}s) == "test/formatter_test.exs:293"
       end
 
       test "does not have file attribute when not configured to" do
@@ -404,6 +436,7 @@ defmodule FormatterTest do
     put_config(:automatic_create_dir?, false)
     put_config(:use_project_subdirectory?, false)
     put_config(:project_dir, nil)
+    put_config(:include_skipped?, true)
   end
 
   defp get_config(name), do: Application.get_env(:junit_formatter, name)
